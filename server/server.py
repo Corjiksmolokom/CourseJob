@@ -1,8 +1,10 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+
+
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,7 +94,7 @@ if os.path.exists("static"):
 async def root():
     """Главная страница"""
     try:
-        # Получаем абсолютный путь к файлу index.html
+        # Получаем абсолютный путь к файлу favorites.html
         current_dir = os.path.dirname(__file__)
         html_path = os.path.join(current_dir, "..", "client", "index.html")
 
@@ -101,36 +103,46 @@ async def root():
                 html_content = f.read()
             return HTMLResponse(content=html_content)
         else:
-            # Если файл не найден, возвращаем простую HTML страницу
-            return HTMLResponse(content="""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Rukami - Творчество в твоих руках</title>
-                <meta charset="utf-8">
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
-                    h1 { color: #333; }
-                    .links { margin-top: 30px; }
-                    .links a { margin: 0 10px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-                    .links a:hover { background: #0056b3; }
-                </style>
-            </head>
-            <body>
-                <h1>🎨 Rukami API</h1>
-                <p>Добро пожаловать в API магазина творческих работ ручной работы!</p>
-                <div class="links">
-                    <a href="/docs">📚 API Документация</a>
-                    <a href="/status">⚡ Статус сервера</a>
-                    <a href="/api/categories">📂 Категории товаров</a>
-                </div>
-            </body>
-            </html>
-            """)
+            ...
 
     except Exception as e:
         logger.error(f"Ошибка загрузки главной страницы: {e}")
         return HTMLResponse(content=f"<h1>Ошибка загрузки: {e}</h1>", status_code=500)
+
+@app.get("/favorites", response_class=HTMLResponse)
+async def favorites_page():
+    """Страница избранного"""
+    try:
+        # Получаем абсолютный путь к файлу favorites.html
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "favorites.html")
+
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы избранного: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы избранного")
+
+    @app.get("/profile", response_class=HTMLResponse)
+    async def profile_page():
+        """Страница профиля"""
+        try:
+            current_dir = os.path.dirname(__file__)
+            html_path = os.path.join(current_dir, "..", "client", "profile.html")
+
+            if os.path.exists(html_path):
+                with open(html_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+                return HTMLResponse(content=html_content)
+            else:
+                ...
+        except Exception as e:
+            logger.error(f"Ошибка загрузки страницы профиля: {e}")
+            raise HTTPException(status_code=500, detail="Ошибка загрузки страницы профиля")
 
 
 # Эндпоинт для проверки статуса

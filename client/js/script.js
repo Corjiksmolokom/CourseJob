@@ -1,314 +1,240 @@
-// Mock data for categories
-const categories = [
-    {
-        id: 1,
-        name: 'Керамика',
-        count: 124,
-        icon: '🏺'
-    },
-    {
-        id: 2,
-        name: 'Украшения',
-        count: 89,
-        icon: '💎'
-    },
-    {
-        id: 3,
-        name: 'Текстиль',
-        count: 156,
-        icon: '🧶'
-    },
-    {
-        id: 4,
-        name: 'Дерево',
-        count: 73,
-        icon: '🪵'
-    },
-    {
-        id: 5,
-        name: 'Мыло',
-        count: 45,
-        icon: '🧼'
-    },
-    {
-        id: 6,
-        name: 'Свечи',
-        count: 62,
-        icon: '🕯️'
-    },
-    {
-        id: 7,
-        name: 'Игрушки',
-        count: 38,
-        icon: '🧸'
-    },
-    {
-        id: 8,
-        name: 'Картины',
-        count: 91,
-        icon: '🎨'
-    }
-];
-
-// Mock data for products
-const products = [
-    {
-        id: 1,
-        name: 'Керамическая ваза "Закат"',
-        description: 'Уникальная ваза ручной работы с градиентом заката. Идеально подходит для живых цветов.',
-        price: 3500,
-        image: 'ceramic-vase.jpg',
-        category: 'Керамика',
-        author: 'Мария Петрова',
-        inStock: true
-    },
-    {
-        id: 2,
-        name: 'Серебряное кольцо с аметистом',
-        description: 'Элегантное кольцо из серебра 925 пробы с натуральным аметистом.',
-        price: 4200,
-        image: 'silver-ring.jpg',
-        category: 'Украшения',
-        author: 'Анна Смирнова',
-        inStock: true
-    },
-    {
-        id: 3,
-        name: 'Вязаный плед "Облака"',
-        description: 'Мягкий плед из натуральной шерсти, связанный вручную. Размер 150x200 см.',
-        price: 5800,
-        image: 'knitted-blanket.jpg',
-        category: 'Текстиль',
-        author: 'Елена Козлова',
-        inStock: true
-    },
-    {
-        id: 4,
-        name: 'Деревянная шкатулка',
-        description: 'Резная шкатулка из массива дуба с инкрустацией. Ручная работа.',
-        price: 2900,
-        image: 'wooden-box.jpg',
-        category: 'Дерево',
-        author: 'Игорь Волков',
-        inStock: true
-    },
-    {
-        id: 5,
-        name: 'Натуральное мыло "Лаванда"',
-        description: 'Мыло ручной варки с эфирным маслом лаванды и сушеными цветами.',
-        price: 450,
-        image: 'lavender-soap.jpg',
-        category: 'Мыло',
-        author: 'Ольга Новикова',
-        inStock: true
-    },
-    {
-        id: 6,
-        name: 'Соевая свеча "Уют"',
-        description: 'Ароматическая свеча из соевого воска с запахом ванили и корицы.',
-        price: 890,
-        image: 'soy-candle.jpg',
-        category: 'Свечи',
-        author: 'Дарья Белова',
-        inStock: true
-    },
-    {
-        id: 7,
-        name: 'Мягкая игрушка "Мишка Тедди"',
-        description: 'Классический мишка Тедди ручной работы из натурального плюша.',
-        price: 1850,
-        image: 'teddy-bear.jpg',
-        category: 'Игрушки',
-        author: 'Светлана Орлова',
-        inStock: true
-    },
-    {
-        id: 8,
-        name: 'Акварель "Весенний сад"',
-        description: 'Оригинальная акварельная картина с изображением цветущего сада.',
-        price: 7500,
-        image: 'watercolor-garden.jpg',
-        category: 'Картины',
-        author: 'Александр Васильев',
-        inStock: true
-    },
-    {
-        id: 9,
-        name: 'Керамическая тарелка',
-        description: 'Декоративная тарелка с ручной росписью в этническом стиле.',
-        price: 1200,
-        image: 'ceramic-plate.jpg',
-        category: 'Керамика',
-        author: 'Мария Петрова',
-        inStock: true
-    }
-];
-
-// Application state
+// Глобальные переменные
 let cart = [];
 let favorites = [];
-let displayedProducts = 6;
-let filteredProducts = [...products];
+let currentPage = 1;
+const productsPerPage = 6;
+let currentCategory = null;
+let currentSearch = '';
+let totalProducts = 0;
+let allProducts = []; // Кэш всех товаров
 
-// DOM elements
-const categoriesGrid = document.getElementById('categoriesGrid');
-const productsGrid = document.getElementById('productsGrid');
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.getElementById('searchBtn');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
-const scrollTopBtn = document.getElementById('scrollTopBtn');
-const cartBtn = document.getElementById('cartBtn');
-const cartCount = document.querySelector('.cart-count');
-const telegramBtn = document.getElementById('telegramBtn');
-
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    renderCategories();
-    renderProducts();
-    setupEventListeners();
-    updateCartCount();
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        await loadProductsFromDatabase();
+        setupEventListeners();
+        updateCartCount();
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+        showNotification('Ошибка загрузки данных');
+    }
 });
 
-// Render categories
-function renderCategories() {
-    categoriesGrid.innerHTML = categories.map(category => `
-        <div class="category-card fade-in" data-category="${category.name}" onclick="filterByCategory('${category.name}')">
-            <div class="category-icon">${category.icon}</div>
-            <div class="category-name">${category.name}</div>
-            <div class="category-count">${category.count} товаров</div>
-        </div>
-    `).join('');
-}
-
-// Render products
-function renderProducts() {
-    const productsToShow = filteredProducts.slice(0, displayedProducts);
-
-    productsGrid.innerHTML = productsToShow.map(product => `
-        <div class="product-card bounce-in">
-            <div class="product-image"></div>
-            <div class="product-info">
-                <div class="product-price">${formatPrice(product.price)} ₽</div>
-                <div class="product-name">${product.name}</div>
-                <div class="product-description">${product.description}</div>
-                <div class="product-actions">
-                    <button class="add-to-cart-btn" onclick="addToCart(${product.id})">
-                        В корзину
-                    </button>
-                    <button class="favorite-btn ${favorites.includes(product.id) ? 'active' : ''}"
-                            onclick="toggleFavorite(${product.id})">
-                        ♡
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    // Update load more button visibility
-    if (displayedProducts >= filteredProducts.length) {
-        loadMoreBtn.style.display = 'none';
-    } else {
-        loadMoreBtn.style.display = 'block';
+// Загрузка товаров из базы данных через API
+async function loadProductsFromDatabase() {
+    try {
+        const productsContainer = document.getElementById('productsContainer');
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        
+        // Показываем индикатор загрузки
+        productsContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Загрузка товаров...</div>';
+        
+        // Делаем запрос к API
+        const response = await fetch(`/api/products?limit=${productsPerPage}&offset=${(currentPage - 1) * productsPerPage}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        totalProducts = data.total;
+        allProducts = currentPage === 1 ? data.products : [...allProducts, ...data.products];
+        
+        renderProducts(data.products);
+        
+        // Показываем кнопку "Загрузить еще", если есть еще товары
+        const remainingProducts = totalProducts - (currentPage * productsPerPage);
+        if (remainingProducts > 0) {
+            loadMoreBtn.style.display = 'block';
+            loadMoreBtn.textContent = `Загрузить еще (${remainingProducts})`;
+        } else {
+            loadMoreBtn.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Ошибка загрузки товаров:', error);
+        document.getElementById('productsContainer').innerHTML = 
+            '<div style="text-align: center; padding: 20px; color: red;">Ошибка загрузки товаров</div>';
     }
 }
 
-// Format price with spaces
+// Рендеринг товаров в стиле оригинального дизайна
+function renderProducts(products) {
+    const productsContainer = document.getElementById('productsContainer');
+    
+    if (products.length === 0) {
+        productsContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Товары не найдены</div>';
+        return;
+    }
+    
+    let productsHTML = '';
+    
+    // Создаем товары по 3 в ряд (как в оригинальном дизайне)
+    for (let i = 0; i < products.length; i += 3) {
+        const row = products.slice(i, i + 3);
+        productsHTML += createProductRow(row, i);
+    }
+    
+    if (currentPage === 1) {
+        productsContainer.innerHTML = productsHTML;
+    } else {
+        productsContainer.innerHTML += productsHTML;
+    }
+}
+
+// Создание ряда товаров (3 товара в ряд)
+function createProductRow(products, startIndex) {
+    const baseTop = 334 + Math.floor(startIndex / 3) * 695; // 695px между рядами
+    
+    let rowHTML = `<div class="product-row" style="position: absolute; width: 1168px; height: 530px; top: ${baseTop}px; left: 140px;">`;
+    
+    products.forEach((product, index) => {
+        const leftPosition = index * 414; // 414px между товарами
+        rowHTML += createProductCard(product, leftPosition);
+    });
+    
+    rowHTML += '</div>';
+    return rowHTML;
+}
+
+// Создание карточки товара
+function createProductCard(product, leftPosition) {
+    const isFavorite = favorites.includes(product.id);
+    const buttonTop = 417; // Позиция кнопки "В корзину"
+    
+    return `
+        <!-- Основная карточка товара -->
+        <div class="product-main-card" style="position: absolute; width: 340px; height: 400px; top: 0; left: ${leftPosition}px; background-color: #d9d9d9; border-radius: 20px; background-image: url('/static/${product.image_url || ''}'); background-size: cover; background-position: center;">
+        </div>
+        
+        <!-- Цена товара (слева вверху) -->
+        <div class="product-price" style="position: absolute; top: 15px; left: ${leftPosition + 15}px; background-color: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 15px; font-family: 'Unbounded', Helvetica; font-weight: 600; color: #000; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            ${formatPrice(product.price)} ₽
+        </div>
+
+        <!-- Кнопка избранного (справа вверху) -->
+        <div class="favorite-btn ${isFavorite ? 'active' : ''}" style="position: absolute; top: 15px; left: ${leftPosition + 285}px; width: 40px; height: 40px; background-color: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s ease;" onclick="toggleFavorite(${product.id})">
+            ${isFavorite ? '❤️' : '🤍'}
+        </div>
+
+        <!-- Название товара -->
+        <div class="product-name" style="position: absolute; width: 214px; height: 49px; top: ${buttonTop}px; left: ${leftPosition}px; background-color: #d9d9d9; display: flex; align-items: center; justify-content: center; font-family: 'Inter', Helvetica; font-size: 14px; color: #373737;">
+            ${product.name}
+        </div>
+
+        <!-- Автор товара -->
+        <div class="product-author" style="position: absolute; width: 340px; height: 49px; top: ${buttonTop + 64}px; left: ${leftPosition}px; background-color: #d9d9d9; display: flex; align-items: center; justify-content: center; font-family: 'Inter', Helvetica; font-size: 12px; color: #666;">
+            ${product.description || 'Описание не указано'}
+        </div>
+
+        <!-- Кнопка "В корзину" -->
+        <div class="add-to-cart-wrapper" style="position: absolute; width: 340px; height: 65px; top: ${buttonTop + 128}px; left: ${leftPosition}px; background-color: #fddbe9; border-radius: 30px; cursor: pointer; transition: all 0.2s ease;" onclick="addToCart(${product.id})" onmouseover="this.style.backgroundColor='#fcb8d4'" onmouseout="this.style.backgroundColor='#fddbe9'">
+            <div class="cart-btn-text" style="position: absolute; top: 18px; left: 95px; font-family: 'Unbounded', Helvetica; font-weight: 400; color: #000000; font-size: 24px; letter-spacing: 0; line-height: normal;">
+                В корзину
+            </div>
+        </div>
+    `;
+}
+
+// Форматирование цены
 function formatPrice(price) {
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-// Add to cart functionality
-function addToCart(productId) {
-    const product = products.find(p => p.id === productId);
-    if (product) {
+// Добавление товара в корзину
+async function addToCart(productId) {
+    try {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) {
+            showNotification('Товар не найден');
+            return;
+        }
+
         const existingItem = cart.find(item => item.id === productId);
         if (existingItem) {
             existingItem.quantity += 1;
         } else {
             cart.push({ ...product, quantity: 1 });
         }
+        
         updateCartCount();
         showNotification(`${product.name} добавлен в корзину`);
+        
+        // Анимация кнопки
+        const button = event.target.closest('.add-to-cart-wrapper');
+        if (button) {
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 150);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка добавления в корзину:', error);
+        showNotification('Ошибка добавления товара');
     }
 }
 
-// Toggle favorite
-function toggleFavorite(productId) {
-    const index = favorites.indexOf(productId);
-    if (index > -1) {
-        favorites.splice(index, 1);
-    } else {
-        favorites.push(productId);
-    }
-    renderProducts();
+// Переключение избранного
+async function toggleFavorite(productId) {
+    try {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) {
+            showNotification('Товар не найден');
+            return;
+        }
 
-    const product = products.find(p => p.id === productId);
-    const action = favorites.includes(productId) ? 'добавлен в избранное' : 'удален из избранного';
-    showNotification(`${product.name} ${action}`);
+        const index = favorites.indexOf(productId);
+        if (index > -1) {
+            favorites.splice(index, 1);
+        } else {
+            favorites.push(productId);
+        }
+        
+        // Обновляем иконку избранного
+        const favoriteBtn = event.target;
+        if (favoriteBtn) {
+            if (favorites.includes(productId)) {
+                favoriteBtn.textContent = '❤️';
+                favoriteBtn.classList.add('active');
+            } else {
+                favoriteBtn.textContent = '🤍';
+                favoriteBtn.classList.remove('active');
+            }
+        }
+        
+        const action = favorites.includes(productId) ? 'добавлен в избранное' : 'удален из избранного';
+        showNotification(`${product.name} ${action}`);
+        
+    } catch (error) {
+        console.error('Ошибка изменения избранного:', error);
+        showNotification('Ошибка изменения избранного');
+    }
 }
 
-// Update cart count
+// Обновление счетчика корзины
 function updateCartCount() {
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    cartCount.textContent = totalItems;
-}
-
-// Filter by category
-function filterByCategory(categoryName) {
-    if (categoryName === 'Все') {
-        filteredProducts = [...products];
-    } else {
-        filteredProducts = products.filter(product => product.category === categoryName);
-    }
-    displayedProducts = 6;
-    renderProducts();
-
-    // Scroll to products section
-    document.querySelector('.products-section').scrollIntoView({
-        behavior: 'smooth'
-    });
-}
-
-// Search functionality
-function performSearch() {
-    const query = searchInput.value.toLowerCase().trim();
-
-    if (query === '') {
-        filteredProducts = [...products];
-    } else {
-        filteredProducts = products.filter(product =>
-            product.name.toLowerCase().includes(query) ||
-            product.description.toLowerCase().includes(query) ||
-            product.category.toLowerCase().includes(query) ||
-            product.author.toLowerCase().includes(query)
-        );
-    }
-
-    displayedProducts = 6;
-    renderProducts();
-
-    if (query !== '') {
-        showNotification(`Найдено ${filteredProducts.length} товаров по запросу "${query}"`);
+    // Если есть элемент счетчика корзины в шапке
+    const cartCount = document.querySelector('.cart-count');
+    if (cartCount) {
+        cartCount.textContent = totalItems;
     }
 }
 
-// Load more products
-function loadMoreProducts() {
-    displayedProducts += 6;
-    renderProducts();
+// Загрузка дополнительных товаров
+async function loadMoreProducts() {
+    try {
+        currentPage++;
+        await loadProductsFromDatabase();
+    } catch (error) {
+        console.error('Ошибка загрузки дополнительных товаров:', error);
+        showNotification('Ошибка загрузки товаров');
+    }
 }
 
-// Scroll to top
-function scrollToTop() {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
-}
-
-// Show notification
+// Показ уведомления
 function showNotification(message) {
-    // Create notification element
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -328,145 +254,84 @@ function showNotification(message) {
 
     document.body.appendChild(notification);
 
-    // Animate in
     setTimeout(() => {
         notification.style.transform = 'translateX(0)';
     }, 100);
 
-    // Remove after 3 seconds
     setTimeout(() => {
         notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
         }, 300);
     }, 3000);
 }
 
-// Setup event listeners
+// Настройка обработчиков событий
 function setupEventListeners() {
-    // Search functionality
-    searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            performSearch();
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', loadMoreProducts);
+    }
+    
+    // Обработчик клика по логотипу для перезагрузки товаров
+    const logo = document.querySelector('.text-wrapper');
+    if (logo) {
+        logo.addEventListener('click', function() {
+             window.location.href = '/';
+        });
+    }
+    
+    // Клавиатурные сочетания
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+            e.preventDefault();
+            currentPage = 1;
+            loadProductsFromDatabase();
         }
     });
-
-    // Load more button
-    loadMoreBtn.addEventListener('click', loadMoreProducts);
-
-    // Scroll to top button
-    scrollTopBtn.addEventListener('click', scrollToTop);
-
-    // Telegram bot button
-    telegramBtn.addEventListener('click', function() {
-        showNotification('Телеграм бот скоро будет доступен!');
-    });
-
-    // Cart button
-    cartBtn.addEventListener('click', function() {
-        if (cart.length === 0) {
-            showNotification('Корзина пуста');
-        } else {
-            showNotification(`В корзине ${cart.length} товаров`);
-        }
-    });
-
-    // Profile and favorites buttons
-    document.getElementById('profileBtn').addEventListener('click', function() {
-        showNotification('Личный кабинет в разработке');
-    });
-
-    document.getElementById('favoritesBtn').addEventListener('click', function() {
-        if (favorites.length === 0) {
-            showNotification('Список избранного пуст');
-        } else {
-            showNotification(`В избранном ${favorites.length} товаров`);
-        }
-    });
-
-    // Header scroll effect
-    let lastScrollTop = 0;
-    window.addEventListener('scroll', function() {
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const header = document.querySelector('.header');
-
-        if (scrollTop > lastScrollTop && scrollTop > 100) {
-            // Scrolling down
-            header.style.transform = 'translateY(-100%)';
-        } else {
-            // Scrolling up
-            header.style.transform = 'translateY(0)';
-        }
-
-        lastScrollTop = scrollTop;
-
-        // Show/hide scroll to top button
-        if (scrollTop > 300) {
-            scrollTopBtn.style.display = 'flex';
-        } else {
-            scrollTopBtn.style.display = 'none';
-        }
-    });
-
-    // Add "All categories" option
-    const allCategoriesCard = document.createElement('div');
-    allCategoriesCard.className = 'category-card fade-in';
-    allCategoriesCard.innerHTML = `
-        <div class="category-icon">🎯</div>
-        <div class="category-name">Все категории</div>
-        <div class="category-count">${products.length} товаров</div>
-    `;
-    allCategoriesCard.addEventListener('click', () => filterByCategory('Все'));
-    categoriesGrid.insertBefore(allCategoriesCard, categoriesGrid.firstChild);
 }
 
-// Add some interactive features
-document.addEventListener('mousemove', function(e) {
-    const heroGradient = document.querySelector('.hero-gradient');
-    if (heroGradient) {
-        const x = (e.clientX / window.innerWidth) * 100;
-        const y = (e.clientY / window.innerHeight) * 100;
-        heroGradient.style.background = `radial-gradient(circle at ${x}% ${y}%, rgba(255, 107, 157, 0.3) 0%, rgba(255, 140, 200, 0.2) 50%, transparent 100%)`;
+// Поиск товаров (базовая реализация)
+async function searchProducts(query) {
+    try {
+        const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=${productsPerPage}`);
+        if (!response.ok) throw new Error('Ошибка поиска');
+        
+        const data = await response.json();
+        allProducts = data.products;
+        totalProducts = data.total;
+        currentPage = 1;
+        
+        renderProducts(data.products);
+        showNotification(`Найдено ${totalProducts} товаров`);
+        
+    } catch (error) {
+        console.error('Ошибка поиска:', error);
+        showNotification('Ошибка выполнения поиска');
     }
-});
+}
 
-// Add keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + K for search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInput.focus();
+// Фильтрация по категории
+async function filterByCategory(categorySlug) {
+    try {
+        const url = categorySlug ? `/api/products?category_slug=${categorySlug}&limit=${productsPerPage}` : `/api/products?limit=${productsPerPage}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error('Ошибка фильтрации');
+        
+        const data = await response.json();
+        allProducts = data.products;
+        totalProducts = data.total;
+        currentPage = 1;
+        currentCategory = categorySlug;
+        
+        renderProducts(data.products);
+        showNotification(`Найдено ${totalProducts} товаров в категории`);
+        
+    } catch (error) {
+        console.error('Ошибка фильтрации:', error);
+        showNotification('Ошибка фильтрации товаров');
     }
-
-    // Escape to clear search
-    if (e.key === 'Escape' && document.activeElement === searchInput) {
-        searchInput.value = '';
-        performSearch();
-        searchInput.blur();
-    }
-});
-
-// Add some fun easter eggs
-let clickCount = 0;
-document.querySelector('.logo h1').addEventListener('click', function() {
-    clickCount++;
-    if (clickCount === 5) {
-        showNotification('🎉 Секретный режим активирован! 🎉');
-        document.body.style.animation = 'rainbow 2s infinite';
-        setTimeout(() => {
-            document.body.style.animation = '';
-            clickCount = 0;
-        }, 2000);
-    }
-});
-
-// Add CSS for rainbow animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes rainbow {
-        0% { filter: hue-rotate(0deg); }
-        100% { filter: hue-rotate(360deg); }
-    }
-`;
-document.head.appendChild(style);
+}
