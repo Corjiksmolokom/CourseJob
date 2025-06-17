@@ -104,7 +104,7 @@ function createProductCard(product, leftPosition) {
     
     return `
         <!-- Основная карточка товара -->
-        <div class="product-main-card" style="position: absolute; width: 340px; height: 400px; top: 0; left: ${leftPosition}px; background-color: #d9d9d9; border-radius: 20px; background-image: url('/static/${product.image_url || ''}'); background-size: cover; background-position: center;">
+        <div class="product-main-card" style="position: absolute; width: 340px; height: 400px; top: 0; left: ${leftPosition}px; background-color: #d9d9d9; border-radius: 20px; background-image: url('${product.image_url || ''}'); background-size: cover; background-position: center;">
         </div>
         
         <!-- Цена товара (слева вверху) -->

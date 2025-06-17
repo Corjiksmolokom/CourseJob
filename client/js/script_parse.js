@@ -69,7 +69,7 @@ function navigateToProfile() {
     saveToLocalStorage();
 
     // Переходим на страницу профиля
-    window.location.href = '/profile';
+    window.location.href = '/login';
 }
 
 function navigateToCart() {
@@ -156,7 +156,16 @@ async function renderProducts() {
         const data = await fetchProducts(currentPage, currentCategory, currentSearch);
         totalProducts = data.total;
         const products = data.products;
-
+        // Добавить эти строки после получения данных от API
+        console.log('Products data:', products);
+        products.forEach((product, index) => {
+            console.log(`Product ${index + 1}:`, {
+                id: product.id,
+                name: product.name,
+                image_url: product.image_url,
+                fullImageUrl: product.image_url
+            });
+        });
         if (products.length === 0) {
             productsGrid.innerHTML = '<p class="no-results">Товары не найдены</p>';
             loadMoreBtn.style.display = 'none';
@@ -165,7 +174,7 @@ async function renderProducts() {
 
         productsGrid.innerHTML = products.map(product => `
             <div class="product-card bounce-in">
-                <div class="product-image" style="background-image: url('static/${product.image_url}')"></div>
+                <div class="product-image" style=" background-color: #d9d9d9; background-position: center;  background-size: cover; background-image: url('${product.image_url || ''}');"></div>
                 <div class="product-info">
                     <div class="product-price">${formatPrice(product.price)} ₽</div>
                     <div class="product-name">${product.name}</div>

@@ -67,7 +67,7 @@ async def create_tables(connection: asyncpg.Connection):
         );
     """)
 
-    # 3. Таблица товаров (изменяем category на category_id)
+    # 3. Таблица товаров (добавлено поле user_id)
     await connection.execute("""
         CREATE TABLE IF NOT EXISTS products (
             id SERIAL PRIMARY KEY,
@@ -75,7 +75,7 @@ async def create_tables(connection: asyncpg.Connection):
             description TEXT NOT NULL,
             price DECIMAL(10,2) NOT NULL,
             category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
-            author VARCHAR(255) NOT NULL,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,  -- ЗДЕСЬ ИЗМЕНЕНИЕ
             image_url VARCHAR(500),
             in_stock BOOLEAN DEFAULT true,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -163,44 +163,33 @@ async def add_sample_categories(connection: asyncpg.Connection):
 
 async def add_sample_products(connection: asyncpg.Connection):
     """Добавление тестовых товаров"""
+    # Сначала добавим тестовых пользователей
+    users = [
+        ("Мария Петрова", "maria@example.com", "password1"),
+        ("Анна Смирнова", "anna@example.com", "password2"),
+        ("Елена Козлова", "elena@example.com", "password3"),
+    ]
+
+    for name, email, password in users:
+        await connection.execute("""
+            INSERT INTO users (name, email, password_hash)
+            VALUES ($1, $2, $3)
+        """, name, email, password)
+
+    # Теперь добавим товары, связанные с пользователями
     sample_products = [
-        ("Керамическая ваза 'Закат'",
-         "Уникальная ваза ручной работы с градиентом заката. Идеально подходит для живых цветов.",
-         3500, 1, "Мария Петрова", "ceramic-vase.jpg"),
-        ("Серебряное кольцо с аметистом",
-         "Элегантное кольцо из серебра 925 пробы с натуральным аметистом.",
-         4200, 2, "Анна Смирнова", "silver-ring.jpg"),
-        ("Вязаный плед 'Облака'",
-         "Мягкий плед из натуральной шерсти, связанный вручную. Размер 150x200 см.",
-         5800, 3, "Елена Козлова", "knitted-blanket.jpg"),
-        ("Деревянная шкатулка",
-         "Резная шкатулка из массива дуба с инкрустацией. Ручная работа.",
-         2900, 4, "Игорь Волков", "wooden-box.jpg"),
-        ("Натуральное мыло 'Лаванда'",
-         "Мыло ручной варки с эфирным маслом лаванды и сушеными цветами.",
-         450, 5, "Ольга Новикова", "lavender-soap.jpg"),
-        ("Соевая свеча 'Уют'",
-         "Ароматическая свеча из соевого воска с запахом ванили и корицы.",
-         890, 6, "Дарья Белова", "soy-candle.jpg"),
-        ("Мягкая игрушка 'Мишка Тедди'",
-         "Классический мишка Тедди ручной работы из натурального плюша.",
-         1850, 7, "Светлана Орлова", "teddy-bear.jpg"),
-        ("Акварель 'Весенний сад'",
-         "Оригинальная акварельная картина с изображением цветущего сада.",
-         7500, 8, "Александр Васильев", "watercolor-garden.jpg"),
-        ("Керамическая тарелка",
-         "Декоративная тарелка с ручной росписью в этническом стиле.",
-         1200, 1, "Мария Петрова", "ceramic-plate.jpg"),
-        ("Кожаная сумка",
-         "Стильная сумка из натуральной кожи ручной работы.",
-         6500, 9, "Михаил Кузнецов", "leather-bag.jpg")
+        ("Керамическая ваза 'Закат'", "Уникальная ваза ручной работы с градиентом заката. Идеально подходит для живых цветов.", 3500, 1, "ceramic-vase.jpg"),
+        ("Серебряное кольцо с аметистом", "Элегантное кольцо из серебра 925 пробы с натуральным аметистом.", 4200, 2, "silver-ring.jpg"),
+        ("Вязаный плед 'Облака'", "Мягкий плед из натуральной шерсти, связанный вручную. Размер 150x200 см.", 5800, 3, "knitted-blanket.jpg"),
     ]
 
     for product in sample_products:
         await connection.execute("""
-            INSERT INTO products (name, description, price, category_id, author, image_url)
+            INSERT INTO products (name, description, price, category_id, user_id, image_url)
             VALUES ($1, $2, $3, $4, $5, $6)
-        """, *product)
+        """, product[0], product[1], product[2], product[3], 1, product[4])  # предполагаем, что пользователи с id 1,2,3 были добавлены выше
+
+    logger.info("Тестовые пользователи и товары добавлены")
 
 
 async def close_database_pool():

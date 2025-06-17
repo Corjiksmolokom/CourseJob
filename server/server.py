@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,11 +65,9 @@ app = FastAPI(
 if os.path.exists("client"):
     app.mount("/styles", StaticFiles(directory="client/styles"), name="styles")
     app.mount("/img", StaticFiles(directory="client/img"), name="images")
-    app.mount("/js", StaticFiles(directory="client/js   "), name="scripts")
+    app.mount("/js", StaticFiles(directory="client/js"), name="scripts")
 
-# Статические файлы для загрузок
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 
 # Настройка CORS
@@ -80,13 +78,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    response = await call_next(request)
+    return response
 
 # Подключение API роутов
 app.include_router(api_router)
 
-# Статические файлы (для изображений, CSS, JS)
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 
 # Корневой эндпоинт
@@ -127,23 +127,57 @@ async def favorites_page():
         logger.error(f"Ошибка загрузки страницы избранного: {e}")
         raise HTTPException(status_code=500, detail="Ошибка загрузки страницы избранного")
 
-    @app.get("/profile", response_class=HTMLResponse)
-    async def profile_page():
-        """Страница профиля"""
-        try:
-            current_dir = os.path.dirname(__file__)
-            html_path = os.path.join(current_dir, "..", "client", "profile.html")
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page():
+    """Страница профиля"""
+    try:
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "profile.html")
 
-            if os.path.exists(html_path):
-                with open(html_path, "r", encoding="utf-8") as f:
-                    html_content = f.read()
-                return HTMLResponse(content=html_content)
-            else:
-                ...
-        except Exception as e:
-            logger.error(f"Ошибка загрузки страницы профиля: {e}")
-            raise HTTPException(status_code=500, detail="Ошибка загрузки страницы профиля")
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы профиля: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы профиля")
 
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """Страница входа"""
+    try:
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "login.html")
+
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы входа: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы входа")
+
+@app.get("/cart", response_class=HTMLResponse)
+async def cart_page():
+    """Страница корзины"""
+    try:
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "cart.html")
+
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы корзины: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы корзины")
 
 # Эндпоинт для проверки статуса
 @app.get("/status")

@@ -1,7 +1,13 @@
-"""API эндпоинты для сайта Rukami"""
-from fastapi import APIRouter, HTTPException, Query
+"""Расширенный API с авторизацией и управлением товарами для сайта Rukami"""
+from fastapi import APIRouter, HTTPException, Query, Depends, status, Request, Response
+from fastapi.security import HTTPBearer
 from typing import List, Optional
 import logging
+import hashlib
+import jwt
+from datetime import datetime, timedelta
+
+from pydantic import BaseModel, EmailStr
 
 from server.database.db_connection import fetch_all, fetch_one, execute_query
 
@@ -10,6 +16,501 @@ logger = logging.getLogger(__name__)
 # Создаем роутер
 router = APIRouter(prefix="/api", tags=["API"])
 
+# Настройки для JWT
+SECRET_KEY = "your-secret-key-here"  # В продакшене должен быть в переменных окружения
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+security = HTTPBearer()
+
+# === МОДЕЛИ ДАННЫХ ===
+
+class UserRegister(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    category_id: int
+    image_url: Optional[str] = None
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category_id: Optional[int] = None
+    image_url: Optional[str] = None
+    in_stock: Optional[bool] = None
+
+class CategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    slug: str
+    image_url: Optional[str] = None
+    sort_order: Optional[int] = 0
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+# === УТИЛИТЫ ===
+
+def hash_password(password: str) -> str:
+    """Хеширование пароля"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Проверка пароля"""
+    return hash_password(password) == hashed
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Создание JWT токена"""
+    logger.info(f"Generating token for user: {data['sub']}")
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(request: Request):
+    """Получение текущего пользователя из cookie"""
+    try:
+        user_id = request.cookies.get("user_id")
+        logger.info(f"Cookie user_id: {user_id}")
+
+        if not user_id:
+            logger.warning("Cookie user_id отсутствует")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Пользователь не авторизован"
+            )
+
+        try:
+            user_id = int(user_id)
+            logger.info(f"Поиск пользователя с ID: {user_id}")
+
+            user = await fetch_one("SELECT id, name, email, phone, address, created_at FROM users WHERE id = $1",
+                                   user_id)
+
+            if not user:
+                logger.warning(f"Пользователь с ID {user_id} не найден в базе данных")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Пользователь не найден"
+                )
+
+            logger.info(f"Пользователь найден: {user['name']} ({user['email']})")
+            return dict(user)
+
+        except ValueError as ve:
+            logger.error(f"Ошибка преобразования user_id в int: {ve}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверный формат ID пользователя"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка в get_current_user: {e}")
+        logger.error(f"Тип ошибки: {type(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Внутренняя ошибка сервера"
+        )
+
+@router.put("/profile")
+async def update_profile(profile_data: UserProfileUpdate, current_user: dict = Depends(get_current_user)):
+    """Обновление профиля пользователя"""
+    try:
+        # Формируем запрос обновления только для переданных полей
+        update_fields = []
+        update_values = []
+        param_counter = 1
+
+        for field, value in profile_data.dict(exclude_unset=True).items():
+            update_fields.append(f"{field} = ${param_counter}")
+            update_values.append(value)
+            param_counter += 1
+
+        if not update_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Нет данных для обновления"
+            )
+
+        update_values.append(current_user['id'])
+        query = f"""
+            UPDATE users 
+            SET {', '.join(update_fields)}, updated_at = NOW()
+            WHERE id = ${param_counter}
+        """
+
+        await execute_query(query, *update_values)
+
+        # Возвращаем обновленную информацию о пользователе
+        updated_user = await fetch_one("""
+            SELECT id, name, email, phone, address, created_at, updated_at
+            FROM users WHERE id = $1
+        """, current_user['id'])
+
+        return {
+            "message": "Профиль обновлен успешно",
+            "user": dict(updated_user)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка обновления профиля: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка обновления профиля")
+
+
+@router.get("/profile/products")
+async def get_user_products(current_user: dict = Depends(get_current_user)):
+    """Получение списка товаров пользователя"""
+    try:
+        # Сначала проверим, есть ли у пользователя товары
+        logger.info(f"Загрузка товаров для пользователя ID: {current_user['id']}")
+
+        products = await fetch_all("""
+            SELECT p.id, p.name, p.description, p.price, p.image_url,
+                   p.in_stock, p.created_at, p.updated_at,
+                   c.id as category_id, c.name as category_name, c.slug as category_slug,
+                   u.name as author_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN users u ON p.user_id = u.id
+            WHERE p.user_id = $1
+            ORDER BY p.created_at DESC
+        """, current_user['id'])
+
+        logger.info(f"Найдено товаров: {len(products)}")
+
+        return {"products": [dict(product) for product in products]}
+
+    except Exception as e:
+        logger.error(f"Ошибка получения товаров пользователя: {e}")
+        logger.error(f"Тип ошибки: {type(e)}")
+        logger.error(f"User ID: {current_user.get('id', 'unknown')}")
+
+        # Возвращаем пустой список вместо ошибки, чтобы интерфейс работал
+        return {"products": []}
+
+
+@router.get("/profile/statistics")
+async def get_user_statistics(current_user: dict = Depends(get_current_user)):
+    """Получение статистики пользователя"""
+    try:
+        logger.info(f"Загрузка статистики для пользователя ID: {current_user['id']}")
+
+        # Получаем количество товаров
+        products_count_result = await fetch_one("""
+            SELECT COUNT(*) as count FROM products WHERE user_id = $1
+        """, current_user['id'])
+        products_count = products_count_result['count'] if products_count_result else 0
+
+        # Получаем количество активных товаров
+        active_products_result = await fetch_one("""
+            SELECT COUNT(*) as count FROM products WHERE user_id = $1 AND in_stock = true
+        """, current_user['id'])
+        active_products_count = active_products_result['count'] if active_products_result else 0
+
+        # Получаем количество заказов (пока заглушка)
+        orders_count = 0
+
+        # Получаем количество товаров в избранном у других пользователей
+        try:
+            favorites_result = await fetch_one("""
+                SELECT COUNT(*) as count 
+                FROM favorites f 
+                JOIN products p ON f.product_id = p.id 
+                WHERE p.user_id = $1
+            """, current_user['id'])
+            favorites_count = favorites_result['count'] if favorites_result else 0
+        except Exception as fav_error:
+            logger.warning(f"Ошибка получения избранного: {fav_error}")
+            favorites_count = 0
+
+        logger.info(
+            f"Статистика: товаров={products_count}, активных={active_products_count}, избранное={favorites_count}")
+
+        return {
+            "products_count": products_count,
+            "active_products_count": active_products_count,
+            "orders_count": orders_count,
+            "favorites_count": favorites_count
+        }
+
+    except Exception as e:
+        logger.error(f"Ошибка получения статистики: {e}")
+        logger.error(f"Тип ошибки: {type(e)}")
+        logger.error(f"User ID: {current_user.get('id', 'unknown')}")
+
+        # Возвращаем нулевую статистику вместо ошибки
+        return {
+            "products_count": 0,
+            "active_products_count": 0,
+            "orders_count": 0,
+            "favorites_count": 0
+        }
+
+# === АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ===
+
+@router.post("/auth/register")
+async def register_user(user_data: UserRegister):
+    """Регистрация нового пользователя"""
+    try:
+        existing_user = await fetch_one("SELECT id FROM users WHERE email = $1", user_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пользователь с таким email уже существует"
+            )
+
+        hashed_password = hash_password(user_data.password)
+
+        user_id = await fetch_one("""
+            INSERT INTO users (name, email, password_hash, phone, address)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        """, user_data.name, user_data.email, hashed_password, user_data.phone, user_data.address)
+
+        return {
+            "message": "Пользователь успешно зарегистрирован",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка регистрации пользователя: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка регистрации пользователя")
+
+@router.post("/auth/login")
+async def login_user(user_data: UserLogin, response: Response):
+    """Авторизация пользователя"""
+    try:
+        user = await fetch_one(
+            "SELECT id, name, email, password_hash FROM users WHERE email = $1",
+            user_data.email
+        )
+
+        if not user or not verify_password(user_data.password, user['password_hash']):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверный email или пароль"
+            )
+
+        # Устанавливаем cookie с ID пользователя
+        response.set_cookie(
+            key="user_id",
+            value=str(user['id']),
+            httponly=True,  # Защита от XSS
+            max_age=30*24*60*60,  # 30 дней
+            samesite="lax"
+        )
+
+        return {
+            "message": "Успешная авторизация",
+            "user": {
+                "id": user['id'],
+                "name": user['name'],
+                "email": user['email']
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка авторизации: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка авторизации")
+
+@router.post("/auth/logout")
+async def logout_user(response: Response):
+    """Выход пользователя"""
+    response.delete_cookie(key="user_id")
+    return {"message": "Успешный выход"}
+
+@router.get("/auth/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Получение информации о текущем пользователе"""
+    return current_user
+
+# === УПРАВЛЕНИЕ КАТЕГОРИЯМИ (АДМИН) ===
+
+@router.post("/admin/categories")
+async def create_category(category_data: CategoryCreate, current_user: dict = Depends(get_current_user)):
+    """Создание новой категории (только для админов)"""
+    try:
+        # Проверяем, не существует ли категория с таким именем или slug
+        existing_category = await fetch_one(
+            "SELECT id FROM categories WHERE name = $1 OR slug = $2",
+            category_data.name, category_data.slug
+        )
+        if existing_category:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Категория с таким именем или slug уже существует"
+            )
+
+        category_id = await fetch_one("""
+            INSERT INTO categories (name, description, slug, image_url, sort_order)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        """, category_data.name, category_data.description, category_data.slug,
+            category_data.image_url, category_data.sort_order)
+
+        return {
+            "message": "Категория создана успешно",
+            "category_id": category_id['id']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка создания категории: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка создания категории")
+
+# === УПРАВЛЕНИЕ ТОВАРАМИ ===
+
+@router.post("/products")
+async def create_product(product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
+    """Создание нового товара"""
+    try:
+        # Проверяем существование категории
+        category = await fetch_one("SELECT id FROM categories WHERE id = $1", product_data.category_id)
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Категория не найдена"
+            )
+
+        product_id = await fetch_one("""
+            INSERT INTO products (name, description, price, category_id, user_id, image_url)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id
+        """, product_data.name, product_data.description, product_data.price,
+            product_data.category_id, current_user['id'], product_data.image_url)
+
+        return {
+            "message": "Товар создан успешно",
+            "product_id": product_id['id']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка создания товара: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка создания товара")
+
+@router.put("/products/{product_id}")
+async def update_product(product_id: int, product_data: ProductUpdate, current_user: dict = Depends(get_current_user)):
+    """Обновление товара"""
+    try:
+        # Проверяем существование товара и принадлежность пользователю
+        existing_product = await fetch_one("""
+            SELECT id, user_id FROM products WHERE id = $1
+        """, product_id)
+
+        if not existing_product:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        if existing_product['user_id'] != current_user['id']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="У вас нет прав на редактирование этого товара"
+            )
+
+        # Если указана новая категория, проверяем её существование
+        if product_data.category_id:
+            category = await fetch_one("SELECT id FROM categories WHERE id = $1", product_data.category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Категория не найдена"
+                )
+
+        # Формируем запрос обновления только для переданных полей
+        update_fields = []
+        update_values = []
+        param_counter = 1
+
+        for field, value in product_data.dict(exclude_unset=True).items():
+            update_fields.append(f"{field} = ${param_counter}")
+            update_values.append(value)
+            param_counter += 1
+
+        if not update_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Нет данных для обновления"
+            )
+
+        update_values.append(product_id)
+        query = f"""
+            UPDATE products 
+            SET {', '.join(update_fields)}, updated_at = NOW()
+            WHERE id = ${param_counter}
+        """
+
+        await execute_query(query, *update_values)
+
+        return {"message": "Товар обновлен успешно"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка обновления товара: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка обновления товара")
+
+@router.delete("/products/{product_id}")
+async def delete_product(product_id: int, current_user: dict = Depends(get_current_user)):
+    """Удаление товара"""
+    try:
+        # Проверяем существование товара и принадлежность пользователю
+        existing_product = await fetch_one("""
+            SELECT id, user_id FROM products WHERE id = $1
+        """, product_id)
+
+        if not existing_product:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        if existing_product['user_id'] != current_user['id']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="У вас нет прав на удаление этого товара"
+            )
+
+        # Мягкое удаление - помечаем как недоступный
+        await execute_query("UPDATE products SET in_stock = false WHERE id = $1", product_id)
+
+        return {"message": "Товар удален успешно"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка удаления товара: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка удаления товара")
+
+# === ОРИГИНАЛЬНЫЕ ЭНДПОИНТЫ ===
 
 @router.get("/categories")
 async def get_categories():
@@ -30,7 +531,6 @@ async def get_categories():
     except Exception as e:
         logger.error(f"Ошибка получения категорий: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения категорий")
-
 
 @router.get("/categories/{category_id}")
 async def get_category(category_id: int):
@@ -55,7 +555,6 @@ async def get_category(category_id: int):
         logger.error(f"Ошибка получения категории: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения категории")
 
-
 @router.get("/categories/slug/{slug}")
 async def get_category_by_slug(slug: str):
     """Получение категории по slug"""
@@ -79,9 +578,6 @@ async def get_category_by_slug(slug: str):
         logger.error(f"Ошибка получения категории: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения категории")
 
-
-# === ТОВАРЫ ===
-
 @router.get("/products")
 async def get_products(
         category_id: Optional[int] = None,
@@ -100,13 +596,15 @@ async def get_products(
                 category_filter_id = category['id']
 
         query = """
-            SELECT p.id, p.name, p.description, p.price, p.author, p.image_url, p.in_stock,
-                   c.id as category_id, c.name as category_name, c.slug as category_slug
+            SELECT p.id, p.name, p.description, p.price, p.image_url, p.in_stock,
+                   c.id as category_id, c.name as category_name, c.slug as category_slug,
+                   u.name as author_name
             FROM products p
             JOIN categories c ON p.category_id = c.id
+            LEFT JOIN users u ON p.user_id = u.id
             WHERE p.in_stock = true
             AND ($1::integer IS NULL OR p.category_id = $1)
-            AND ($2::text IS NULL OR (p.name ILIKE $2 OR p.description ILIKE $2 OR p.author ILIKE $2))
+            AND ($2::text IS NULL OR (p.name ILIKE $2 OR p.description ILIKE $2))
             ORDER BY p.created_at DESC
             LIMIT $3 OFFSET $4
         """
@@ -120,7 +618,7 @@ async def get_products(
             FROM products p
             WHERE p.in_stock = true
             AND ($1::integer IS NULL OR p.category_id = $1)
-            AND ($2::text IS NULL OR (p.name ILIKE $2 OR p.description ILIKE $2 OR p.author ILIKE $2))
+            AND ($2::text IS NULL OR (p.name ILIKE $2 OR p.description ILIKE $2))
         """
         total_count = await fetch_one(count_query, category_filter_id, search_param)
 
@@ -135,15 +633,16 @@ async def get_products(
         logger.error(f"Ошибка получения товаров: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения товаров")
 
-
 @router.get("/products/{product_id}")
 async def get_product(product_id: int):
     """Получение информации о товаре"""
     try:
         product = await fetch_one("""
-            SELECT p.*, c.id as category_id, c.name as category_name, c.slug as category_slug
+            SELECT p.*, c.id as category_id, c.name as category_name, c.slug as category_slug,
+                   u.name as author_name
             FROM products p
             JOIN categories c ON p.category_id = c.id
+            LEFT JOIN users u ON p.user_id = u.id
             WHERE p.id = $1
         """, product_id)
 
@@ -158,63 +657,23 @@ async def get_product(product_id: int):
         logger.error(f"Ошибка получения товара: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения товара")
 
-
-@router.get("/products/category/{category_id}")
-async def get_products_by_category(
-        category_id: int,
-        limit: int = Query(default=20, le=100),
-        offset: int = Query(default=0, ge=0)
-):
-    """Получение товаров определенной категории"""
-    try:
-        # Проверяем существование категории
-        category = await fetch_one("SELECT id, name FROM categories WHERE id = $1", category_id)
-        if not category:
-            raise HTTPException(status_code=404, detail="Категория не найдена")
-
-        products = await fetch_all("""
-            SELECT p.id, p.name, p.description, p.price, p.author, p.image_url, p.in_stock,
-                   c.name as category_name, c.slug as category_slug
-            FROM products p
-            JOIN categories c ON p.category_id = c.id
-            WHERE p.category_id = $1 AND p.in_stock = true
-            ORDER BY p.created_at DESC
-            LIMIT $2 OFFSET $3
-        """, category_id, limit, offset)
-
-        total_count = await fetch_one(
-            "SELECT COUNT(*) FROM products WHERE category_id = $1 AND in_stock = true",
-            category_id
-        )
-
-        return {
-            "category": dict(category),
-            "products": [dict(product) for product in products],
-            "total": total_count['count'],
-            "limit": limit,
-            "offset": offset
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Ошибка получения товаров категории: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка получения товаров категории")
-
-
 # === ИЗБРАННОЕ ===
 
-@router.get("/favorites/{user_id}")
-async def get_favorites(user_id: int):
+@router.get("/favorites")
+async def get_favorites(current_user: dict = Depends(get_current_user)):
     """Получение списка избранных товаров пользователя"""
     try:
         favorites = await fetch_all("""
-            SELECT p.id, p.name, p.description, p.price, p.category, p.author, p.image_url
+            SELECT p.id, p.name, p.description, p.price, p.image_url,
+                   c.id as category_id, c.name as category_name, c.slug as category_slug,
+                   u.name as author_name
             FROM favorites f
             JOIN products p ON f.product_id = p.id
+            JOIN categories c ON p.category_id = c.id
+            LEFT JOIN users u ON p.user_id = u.id
             WHERE f.user_id = $1
             ORDER BY f.created_at DESC
-        """, user_id)
+        """, current_user['id'])
 
         return {"favorites": [dict(fav) for fav in favorites]}
 
@@ -222,60 +681,21 @@ async def get_favorites(user_id: int):
         logger.error(f"Ошибка получения избранного: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения избранного")
 
-
-@router.post("/favorites/{user_id}/{product_id}")
-async def add_to_favorites(user_id: int, product_id: int):
-    """Добавление товара в избранное"""
-    try:
-        # Проверяем существование товара
-        product = await fetch_one("SELECT id FROM products WHERE id = $1", product_id)
-        if not product:
-            raise HTTPException(status_code=404, detail="Товар не найден")
-
-        await execute_query("""
-            INSERT INTO favorites (user_id, product_id)
-            VALUES ($1, $2)
-            ON CONFLICT (user_id, product_id) DO NOTHING
-        """, user_id, product_id)
-
-        return {"message": "Товар добавлен в избранное"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Ошибка добавления в избранное: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка добавления в избранное")
-
-
-@router.delete("/favorites/{user_id}/{product_id}")
-async def remove_from_favorites(user_id: int, product_id: int):
-    """Удаление товара из избранного"""
-    try:
-        await execute_query("""
-            DELETE FROM favorites
-            WHERE user_id = $1 AND product_id = $2
-        """, user_id, product_id)
-
-        return {"message": "Товар удален из избранного"}
-
-    except Exception as e:
-        logger.error(f"Ошибка удаления из избранного: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка удаления из избранного")
-
-
 # === КОРЗИНА ===
 
-@router.get("/cart/{user_id}")
-async def get_cart(user_id: int):
+@router.get("/cart")
+async def get_cart(current_user: dict = Depends(get_current_user)):
     """Получение содержимого корзины пользователя"""
     try:
         cart_items = await fetch_all("""
-            SELECT c.id, c.quantity, p.id as product_id, p.name, p.price, p.image_url
+            SELECT c.id, c.quantity, p.id as product_id, p.name, p.price, p.image_url,
+                   u.name as author_name
             FROM cart_items c
             JOIN products p ON c.product_id = p.id
+            LEFT JOIN users u ON p.user_id = u.id
             WHERE c.user_id = $1
             ORDER BY c.created_at DESC
-        """, user_id)
+        """, current_user['id'])
 
         total = sum(item['price'] * item['quantity'] for item in cart_items)
 
@@ -287,84 +707,6 @@ async def get_cart(user_id: int):
     except Exception as e:
         logger.error(f"Ошибка получения корзины: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения корзины")
-
-
-@router.post("/cart/{user_id}/{product_id}")
-async def add_to_cart(user_id: int, product_id: int, quantity: int = 1):
-    """Добавление товара в корзину"""
-    try:
-        # Проверяем существование товара
-        product = await fetch_one("SELECT id FROM products WHERE id = $1", product_id)
-        if not product:
-            raise HTTPException(status_code=404, detail="Товар не найден")
-
-        await execute_query("""
-            INSERT INTO cart_items (user_id, product_id, quantity)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, product_id)
-            DO UPDATE SET quantity = cart_items.quantity + $3, updated_at = NOW()
-        """, user_id, product_id, quantity)
-
-        return {"message": "Товар добавлен в корзину"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Ошибка добавления в корзину: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка добавления в корзину")
-
-
-@router.put("/cart/{user_id}/{product_id}")
-async def update_cart_quantity(user_id: int, product_id: int, quantity: int):
-    """Обновление количества товара в корзине"""
-    try:
-        if quantity <= 0:
-            # Удаляем товар из корзины если количество 0 или меньше
-            await execute_query("""
-                DELETE FROM cart_items
-                WHERE user_id = $1 AND product_id = $2
-            """, user_id, product_id)
-        else:
-            await execute_query("""
-                UPDATE cart_items
-                SET quantity = $3, updated_at = NOW()
-                WHERE user_id = $1 AND product_id = $2
-            """, user_id, product_id, quantity)
-
-        return {"message": "Количество обновлено"}
-
-    except Exception as e:
-        logger.error(f"Ошибка обновления корзины: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка обновления корзины")
-
-
-@router.delete("/cart/{user_id}/{product_id}")
-async def remove_from_cart(user_id: int, product_id: int):
-    """Удаление товара из корзины"""
-    try:
-        await execute_query("""
-            DELETE FROM cart_items
-            WHERE user_id = $1 AND product_id = $2
-        """, user_id, product_id)
-
-        return {"message": "Товар удален из корзины"}
-
-    except Exception as e:
-        logger.error(f"Ошибка удаления из корзины: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка удаления из корзины")
-
-
-@router.delete("/cart/{user_id}")
-async def clear_cart(user_id: int):
-    """Очистка корзины пользователя"""
-    try:
-        await execute_query("DELETE FROM cart_items WHERE user_id = $1", user_id)
-        return {"message": "Корзина очищена"}
-
-    except Exception as e:
-        logger.error(f"Ошибка очистки корзины: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка очистки корзины")
-
 
 # === ОТЗЫВЫ ===
 
@@ -397,50 +739,42 @@ async def get_product_reviews(product_id: int):
         raise HTTPException(status_code=500, detail="Ошибка получения отзывов")
 
 
-@router.post("/reviews/{user_id}/{product_id}")
-async def add_review(user_id: int, product_id: int, rating: int, comment: str = ""):
-    """Добавление отзыва о товаре"""
+@router.post("/profile/password")
+async def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    """Изменение пароля пользователя"""
     try:
-        if rating < 1 or rating > 5:
-            raise HTTPException(status_code=400, detail="Рейтинг должен быть от 1 до 5")
-
-        # Проверяем существование товара
-        product = await fetch_one("SELECT id FROM products WHERE id = $1", product_id)
-        if not product:
-            raise HTTPException(status_code=404, detail="Товар не найден")
-
-        await execute_query("""
-            INSERT INTO reviews (user_id, product_id, rating, comment)
-            VALUES ($1, $2, $3, $4)
-        """, user_id, product_id, rating, comment)
-
-        return {"message": "Отзыв добавлен"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Ошибка добавления отзыва: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка добавления отзыва")
-
-
-# === ПОЛЬЗОВАТЕЛИ (базовые эндпоинты) ===
-
-@router.get("/users/{user_id}")
-async def get_user(user_id: int):
-    """Получение информации о пользователе"""
-    try:
+        # Получаем текущий хеш пароля
         user = await fetch_one("""
-            SELECT id, name, email, phone, address, created_at
-            FROM users WHERE id = $1
-        """, user_id)
+            SELECT password_hash FROM users WHERE id = $1
+        """, current_user['id'])
 
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        # Проверяем текущий пароль
+        if not verify_password(password_data.current_password, user['password_hash']):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Неверный текущий пароль"
+            )
 
-        return dict(user)
+        # Валидация нового пароля
+        if len(password_data.new_password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Новый пароль должен содержать минимум 6 символов"
+            )
+
+        # Хешируем новый пароль
+        new_password_hash = hash_password(password_data.new_password)
+
+        # Обновляем пароль
+        await execute_query("""
+            UPDATE users SET password_hash = $1, updated_at = NOW()
+            WHERE id = $2
+        """, new_password_hash, current_user['id'])
+
+        return {"message": "Пароль успешно изменен"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Ошибка получения пользователя: {e}")
-        raise HTTPException(status_code=500, detail="Ошибка получения пользователя")
+        logger.error(f"Ошибка смены пароля: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка смены пароля")

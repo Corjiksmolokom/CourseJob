@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в аккаунт - Rukami</title>
+    <link rel="stylesheet" href="styles/globals.css" />
+    <style>
+        /* Основные стили */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', Helvetica, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Хедер */
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347, #ff6b9d);
+            background-size: 200% 100%;
+            animation: rainbow 3s linear infinite;
+        }
+
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .logo-text {
+            font-family: 'Kalnia', Helvetica;
+            font-size: 32px;
+            color: #373737;
+            font-weight: 400;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #373737;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            width: 100%;
+        }
+
+        /* Основной контент */
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 48px;
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .auth-title {
+            font-family: 'Unbounded', Helvetica;
+            font-size: 28px;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .auth-subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #ff6b9d;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-input::placeholder {
+            color: #999;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            border: none;
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(255, 107, 157, 0.4);
+            background: linear-gradient(135deg, #ff5a8a, #ff79bd);
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .auth-switch-text {
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .auth-switch-btn {
+            color: #ff6b9d;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .auth-switch-btn::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8);
+            transition: width 0.3s ease;
+        }
+
+        .auth-switch-btn:hover::before {
+            width: 100%;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #fee, #fdd);
+            border: 1px solid #f5c6cb;
+            color: #d63384;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #d1edd1, #c3e6c3);
+            border: 1px solid #b3d4b3;
+            color: #155724;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        /* Дополнительные поля для регистрации */
+        .register-fields {
+            display: none;
+        }
+
+        .register-fields.active {
+            display: block;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .nav-links {
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .auth-container {
+                padding: 32px 24px;
+                margin: 20px;
+            }
+
+            .auth-title {
+                font-size: 24px;
+            }
+        }
+
+        /* Анимации */
+        .auth-container {
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Хедер -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <img src="https://c.animaapp.com/tID658kS/img/image-3@2x.png" alt="Rukami">
+                <span class="logo-text">Rukami</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">каталог</a>
+                <a href="authors.html" class="nav-link">авторы</a>
+                <a href="auction.html" class="nav-link">аукцион</a>
+                <a href="blog.html" class="nav-link">блог</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <div class="auth-container">
+            <h1 class="auth-title" id="authTitle">Вход в аккаунт</h1>
+            <p class="auth-subtitle" id="authSubtitle">Войдите, чтобы получить доступ к избранному и заказам</p>
+
+            <!-- Сообщения об ошибках и успехе -->
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- Форма авторизации/регистрации -->
+            <form id="authForm">
+                <!-- Общие поля -->
+                <div class="form-group register-fields">
+                    <label class="form-label" for="name">Имя *</label>
+                    <input type="text" id="name" name="name" class="form-input" placeholder="Введите ваше имя">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email *</label>
+                    <input type="email" id="email" name="email" class="form-input" placeholder="example@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Пароль *</label>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Введите пароль" required>
+                </div>
+
+                <!-- Дополнительные поля для регистрации -->
+                <div class="register-fields">
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Телефон</label>
+                        <input type="tel" id="phone" name="phone" class="form-input" placeholder="+7 (999) 123-45-67">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="address">Адрес</label>
+                        <input type="text" id="address" name="address" class="form-input" placeholder="Адрес доставки">
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="loading-spinner" id="loadingSpinner"></span>
+                    <span id="submitText">Войти</span>
+                </button>
+            </form>
+
+            <!-- Переключение между формами -->
+            <div class="auth-switch">
+                <p class="auth-switch-text" id="switchText">Нет аккаунта?</p>
+                <a href="#" class="auth-switch-btn" id="switchBtn">Зарегистрироваться</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        class AuthManager {
+    constructor() {
+        this.isLoginMode = true;
+        this.apiBaseUrl = '/api'; // Базовый URL для API
+        this.initializeElements();
+        this.bindEvents();
+    }
+
+    initializeElements() {
+        this.authTitle = document.getElementById('authTitle');
+        this.authSubtitle = document.getElementById('authSubtitle');
+        this.authForm = document.getElementById('authForm');
+        this.submitBtn = document.getElementById('submitBtn');
+        this.submitText = document.getElementById('submitText');
+        this.loadingSpinner = document.getElementById('loadingSpinner');
+        this.switchBtn = document.getElementById('switchBtn');
+        this.switchText = document.getElementById('switchText');
+        this.errorMessage = document.getElementById('errorMessage');
+        this.successMessage = document.getElementById('successMessage');
+        this.registerFields = document.querySelectorAll('.register-fields');
+    }
+
+    bindEvents() {
+        this.switchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleMode();
+        });
+
+        this.authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSubmit();
+        });
+    }
+
+    toggleMode() {
+        this.isLoginMode = !this.isLoginMode;
+        this.updateUI();
+        this.clearMessages();
+    }
+
+    updateUI() {
+        if (this.isLoginMode) {
+            // Режим входа
+            this.authTitle.textContent = 'Вход в аккаунт';
+            this.authSubtitle.textContent = 'Войдите, чтобы получить доступ к избранному и заказам';
+            this.submitText.textContent = 'Войти';
+            this.switchText.textContent = 'Нет аккаунта?';
+            this.switchBtn.textContent = 'Зарегистрироваться';
+
+            // Скрываем дополнительные поля
+            this.registerFields.forEach(field => {
+                field.classList.remove('active');
+            });
+        } else {
+            // Режим регистрации
+            this.authTitle.textContent = 'Создать аккаунт';
+            this.authSubtitle.textContent = 'Присоединяйтесь к творческому сообществу Rukami';
+            this.submitText.textContent = 'Зарегистрироваться';
+            this.switchText.textContent = 'Уже есть аккаунт?';
+            this.switchBtn.textContent = 'Войти';
+
+            // Показываем дополнительные поля
+            this.registerFields.forEach(field => {
+                field.classList.add('active');
+            });
+        }
+    }
+
+    async handleSubmit() {
+        const formData = new FormData(this.authForm);
+        const data = Object.fromEntries(formData.entries());
+
+        // Валидация
+        if (!this.validateForm(data)) {
+            return;
+        }
+
+        this.setLoading(true);
+        this.clearMessages();
+
+        try {
+            if (this.isLoginMode) {
+                await this.login({
+                    email: data.email,
+                    password: data.password
+                });
+            } else {
+                await this.register({
+                    name: data.name,
+                    email: data.email,
+                    password: data.password,
+                    phone: data.phone || null,
+                    address: data.address || null
+                });
+            }
+
+            this.handleSuccess();
+        } catch (error) {
+            this.handleError(error);
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    validateForm(data) {
+        if (!data.email || !data.password) {
+            this.showError('Пожалуйста, заполните все обязательные поля');
+            return false;
+        }
+
+        if (!this.isLoginMode && !data.name) {
+            this.showError('Пожалуйста, введите ваше имя');
+            return false;
+        }
+
+        // Валидация email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email)) {
+            this.showError('Пожалуйста, введите корректный email');
+            return false;
+        }
+
+        // Валидация пароля
+        if (data.password.length < 6) {
+            this.showError('Пароль должен содержать минимум 6 символов');
+            return false;
+        }
+
+        return true;
+    }
+
+    async login(credentials) {
+        const response = await fetch(`${this.apiBaseUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(credentials)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'Ошибка авторизации');
+        }
+
+        return data;
+    }
+
+    async register(userData) {
+        const response = await fetch(`${this.apiBaseUrl}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'Ошибка регистрации');
+        }
+
+        return data;
+    }
+
+    handleSuccess() {
+        // Сохраняем токен из cookie
+        const user_id = document.cookie.split('; ')
+            .find(row => row.startsWith('user_id='))
+            ?.split('=')[1];
+
+        localStorage.setItem('user_id', user_id);
+        localStorage.setItem('isAuthenticated', 'true');
+
+        // Перенаправляем пользователя через 2 секунды
+        setTimeout(() => {
+            window.location.href = '/profile';
+        }, 2000);
+    }
+
+    handleError(error) {
+        console.error('Auth error:', error);
+        this.showError(error.message || 'Произошла ошибка. Попробуйте еще раз.');
+    }
+
+    setLoading(loading) {
+        this.submitBtn.disabled = loading;
+        if (loading) {
+            this.loadingSpinner.style.display = 'inline-block';
+            this.submitText.textContent = this.isLoginMode ? 'Вход...' : 'Регистрация...';
+        } else {
+            this.loadingSpinner.style.display = 'none';
+            this.submitText.textContent = this.isLoginMode ? 'Войти' : 'Зарегистрироваться';
+        }
+    }
+
+    showError(message) {
+        this.errorMessage.textContent = message;
+        this.errorMessage.style.display = 'block';
+        this.successMessage.style.display = 'none';
+    }
+
+    showSuccess(message) {
+        this.successMessage.textContent = message;
+        this.successMessage.style.display = 'block';
+        this.errorMessage.style.display = 'none';
+    }
+
+    clearMessages() {
+        this.errorMessage.style.display = 'none';
+        this.successMessage.style.display = 'none';
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    new AuthManager();
+});
+
+// Проверка авторизации при загрузке
+function checkAuth() {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (isAuthenticated === 'true') {
+        window.location.href = '/profile';
+    }
+}
+
+checkAuth();
+    </script>
+</body>
+</html>
