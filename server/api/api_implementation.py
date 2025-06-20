@@ -7,7 +7,7 @@ import hashlib
 import jwt
 from datetime import datetime, timedelta
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from server.database.db_connection import fetch_all, fetch_one, execute_query
 
@@ -66,6 +66,10 @@ class UserProfileUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+class ReviewCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5, description="Рейтинг от 1 до 5")
+    comment: str = Field(..., min_length=10, max_length=1000, description="Текст отзыва")
 
 # === УТИЛИТЫ ===
 
@@ -738,6 +742,44 @@ async def get_product_reviews(product_id: int):
         logger.error(f"Ошибка получения отзывов: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения отзывов")
 
+
+@router.post("/reviews/{product_id}")
+async def create_review(product_id: int, review_data: ReviewCreate, current_user: dict = Depends(get_current_user)):
+    """Создание отзыва для товара"""
+    try:
+        # Проверяем существование товара
+        product = await fetch_one("SELECT id FROM products WHERE id = $1", product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        # Проверяем, не оставлял ли пользователь уже отзыв на этот товар
+        existing_review = await fetch_one("""
+            SELECT id FROM reviews WHERE product_id = $1 AND user_id = $2
+        """, product_id, current_user['id'])
+
+        if existing_review:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Вы уже оставили отзыв на этот товар"
+            )
+
+        # Создаем отзыв
+        review_id = await fetch_one("""
+            INSERT INTO reviews (product_id, user_id, rating, comment)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        """, product_id, current_user['id'], review_data.rating, review_data.comment)
+
+        return {
+            "message": "Отзыв успешно добавлен",
+            "review_id": review_id['id']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка создания отзыва: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка создания отзыва")
 
 @router.post("/profile/password")
 async def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):

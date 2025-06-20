@@ -179,6 +179,40 @@ async def cart_page():
         logger.error(f"Ошибка загрузки страницы корзины: {e}")
         raise HTTPException(status_code=500, detail="Ошибка загрузки страницы корзины")
 
+@app.get("/product/{product_id}", response_class=HTMLResponse)
+async def product_page(product_id: int):
+    """Страница товара"""
+    try:
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "product.html")
+
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы товара: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы товара")
+
+@app.get("/blog", response_class=HTMLResponse)
+async def blog_page():
+    """Страница блога"""
+    try:
+        current_dir = os.path.dirname(__file__)
+        html_path = os.path.join(current_dir, "..", "client", "blog.html")
+
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+        else:
+            ...
+    except Exception as e:
+        logger.error(f"Ошибка загрузки страницы блога: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка загрузки страницы блога")
+
 # Эндпоинт для проверки статуса
 @app.get("/status")
 async def get_status():

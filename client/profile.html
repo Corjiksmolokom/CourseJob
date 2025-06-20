@@ -53,12 +53,31 @@
             justify-content: space-between;
             align-items: center;
         }
+        .telegram-btn {
+            position: absolute;
+            background: transparent;
+            border: none;
+
+            width: 48px;
+            height: 48px;
+
+
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            padding: 0px 0px 0px 0px;
+        }
+        .telegram-img {
+            width: 52px;
+            height: 52px;
+        }
 
         .logo {
             display: flex;
             align-items: center;
             gap: 16px;
             text-decoration: none;
+            padding: 0px 0px 0px 70px;
         }
 
         .logo img {
@@ -636,15 +655,17 @@
     <!-- Хедер -->
     <header class="header">
         <div class="header-content">
+            <button class="telegram-btn" id="telegramBtn">
+                        <img class="telegram-img" src="img/telegram.png">
+            </button>
             <a href="/" class="logo">
                 <img src="https://c.animaapp.com/tID658kS/img/image-3@2x.png" alt="Rukami">
                 <span class="logo-text">Rukami</span>
             </a>
             <nav class="nav-links">
                 <a href="/" class="nav-link">каталог</a>
-                <a href="authors.html" class="nav-link">авторы</a>
-                <a href="auction.html" class="nav-link">аукцион</a>
-                <a href="blog.html" class="nav-link">блог</a>
+                <a href="/cart" class="nav-link">корзина</a>
+                <a href="/blog" class="nav-link">блог</a>
                 <button class="logout-btn" onclick="logout()">Выйти</button>
             </nav>
         </div>

@@ -21,9 +21,9 @@ body {
 /* Header */
 .header {
     background: transparent;
-    backdrop-filter: blur(10px);
-    position: absolute;
-    top: 0;
+
+    position: relative;
+    top: -150px;
     left: 0;
     right: 0;
     z-index: 1000;
@@ -34,22 +34,23 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px 0;
+    padding: 0px 90px;
+
 }
 
 .telegram-btn {
+    position: relative;
     background: transparent;
     border: none;
-    border-radius: 50%;
+
     width: 48px;
     height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: transparent;
+
+
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+
+    padding: 0px 0px 320px 0px;
 }
 .telegram-img {
     width: 52px;
@@ -58,28 +59,30 @@ body {
 
 .telegram-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
 }
 
 .logo {
     text-align: center;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
+    top: 90px
 }
 
 .logo h1 {
-    font-size: 32px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #ff6b9d, #ff8cc8, #ffd1dc);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: -5px;
+    font-size: 48px;
+    font-weight: 400;
+    color: #333;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    font-family: "Kalnia", "Inter", Helvetica, sans-serif;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 30px;
 }
+
 .hand-img{
-    width: 100px;
-    height: 100px;}
+    width: 140px;
+    height: 140px;
+    }
 
 .tagline {
     font-size: 12px;
@@ -91,7 +94,8 @@ body {
 .nav {
     display: flex;
     gap: 32px;
-    margin-left: 200px;
+    margin-left: 170px;
+    margin-top: -130px;
 }
 
 .nav-link {
@@ -102,6 +106,7 @@ body {
     padding: 8px 16px;
     border-radius: 20px;
     position: relative;
+    font-size: 28px;
 }
 
 .nav-link:hover {
@@ -113,6 +118,7 @@ body {
     display: flex;
     gap: 16px;
     align-items: center;
+    padding: 0px 0px 270px 0px;
 }
 
 .action-btn {
@@ -121,7 +127,8 @@ body {
     color: #666;
     cursor: pointer;
     padding: 8px;
-    border-radius: 50%;
+
+
     transition: all 0.3s ease;
     position: relative;
 }
@@ -152,7 +159,7 @@ body {
 }
 
 .hero {
-    padding: 120px 0 80px;
+    padding: 80px 0 0px;
     position: relative;
     overflow: hidden;
     background: url('/img/background_point.png');
@@ -177,16 +184,20 @@ body {
 
 .hero-content {
     text-align: center;
+    top: -250px;
+    left:30px;
     position: relative;
     z-index: 2;
+    font-family: "Alumni Sans SC", "Inter", Helvetica, sans-serif;
 }
 
 .hero-title {
-    font-size: 48px;
-    font-weight: 700;
+    font-size: 96px;
+    font-weight: 400;
     color: #333;
     margin-bottom: 20px;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    font-family: "Alumni Sans SC", "Inter", Helvetica, sans-serif;
 }
 
 .hero-gradient {
@@ -195,7 +206,7 @@ body {
     background: radial-gradient(circle, rgba(255, 107, 157, 0.3) 0%, rgba(255, 140, 200, 0.2) 50%, transparent 100%);
     border-radius: 50%;
     margin: 0 auto;
-    filter: blur(40px);
+
     animation: pulse 4s ease-in-out infinite;
 }
 

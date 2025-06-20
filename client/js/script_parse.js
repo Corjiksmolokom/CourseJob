@@ -173,7 +173,7 @@ async function renderProducts() {
         }
 
         productsGrid.innerHTML = products.map(product => `
-            <div class="product-card bounce-in">
+            <div class="product-card bounce-in" onclick="openProduct(${product.id})" style="cursor: pointer;">
                 <div class="product-image" style=" background-color: #d9d9d9; background-position: center;  background-size: cover; background-image: url('${product.image_url || ''}');"></div>
                 <div class="product-info">
                     <div class="product-price">${formatPrice(product.price)} ₽</div>
@@ -320,7 +320,7 @@ async function loadMoreProducts() {
         }
 
         const newProductsHTML = newProducts.map(product => `
-            <div class="product-card bounce-in">
+            <div class="product-card bounce-in" onclick="openProduct(${product.id})" style="cursor: pointer;">
                 <div class="product-image" style="background-image: url('${product.image_url}')"></div>
                 <div class="product-info">
                     <div class="product-price">${formatPrice(product.price)} ₽</div>
@@ -417,8 +417,9 @@ function setupEventListeners() {
 
     // Telegram bot button
     telegramBtn.addEventListener('click', function() {
-        showNotification('Телеграм бот скоро будет доступен!');
-    });
+    // Переход в телеграм к боту @rukamiStore_bot
+    window.open('https://t.me/rukamiStore_bot', '_blank');
+});
 
     // Navigation buttons with page transitions
     cartBtn.addEventListener('click', function() {
@@ -515,6 +516,15 @@ document.querySelector('.logo h1').addEventListener('click', function() {
         }, 2000);
     }
 });
+
+// Открытие страницы товара
+function openProduct(productId) {
+    // Сохраняем текущее состояние
+    saveToLocalStorage();
+
+    // Переходим на страницу товара
+    window.location.href = `/product/${productId}`;
+}
 
 // Add CSS for rainbow animation
 const style = document.createElement('style');

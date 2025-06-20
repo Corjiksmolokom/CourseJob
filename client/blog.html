@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Блог - Rukami</title>
+    <link rel="stylesheet" href="styles/globals.css" />
+    <style>
+        /* Основные стили */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', Helvetica, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Хедер */
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347, #ff6b9d);
+            background-size: 200% 100%;
+            animation: rainbow 3s linear infinite;
+        }
+
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .telegram-btn {
+            position: absolute;
+            background: transparent;
+            border: none;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0px;
+        }
+
+        .telegram-img {
+            width: 52px;
+            height: 52px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+            padding: 0px 0px 0px 70px;
+        }
+
+        .logo img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .logo-text {
+            font-family: 'Kalnia', Helvetica;
+            font-size: 32px;
+            color: #373737;
+            font-weight: 400;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #373737;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link.active {
+            color: #ff6b9d;
+            font-weight: 500;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::before,
+        .nav-link.active::before {
+            width: 100%;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3);
+        }
+
+        /* Основной контент */
+        .main-content {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            width: 100%;
+        }
+
+        .blog-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .blog-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .blog-title {
+            font-family: 'Unbounded', Helvetica;
+            font-size: 36px;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .blog-subtitle {
+            font-size: 18px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .create-post-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .create-post-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .post-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .form-input, .form-textarea {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            border-color: #ff6b9d;
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .post-btn {
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .post-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .post-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(255, 107, 157, 0.4);
+            background: linear-gradient(135deg, #ff5a8a, #ff79bd);
+        }
+
+        .post-btn:hover::before {
+            left: 100%;
+        }
+
+        .posts-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .posts-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b9d, #ff8cc8, #ffb347);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .section-title {
+            font-family: 'Unbounded', Helvetica;
+            font-size: 24px;
+            color: #1a1a1a;
+            margin-bottom: 24px;
+        }
+
+        .posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .post-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+        }
+
+        .post-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .post-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .author-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .author-name {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 16px;
+        }
+
+        .post-time {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .post-content {
+            margin-bottom: 16px;
+        }
+
+        .post-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .post-text {
+            color: #333;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 107, 157, 0.1);
+            color: #ff6b9d;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.liked {
+            color: #ff6b9d;
+            background: rgba(255, 107, 157, 0.1);
+        }
+
+        .comments-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .comment {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+        }
+
+        .comment-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ffb347, #ff8cc8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .comment-content {
+            flex: 1;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .comment-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .comment-form {
+            display: none;
+            margin-top: 12px;
+            gap: 12px;
+        }
+
+        .comment-form.active {
+            display: flex;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .comment-input:focus {
+            border-color: #ff6b9d;
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+        }
+
+        .comment-btn {
+            background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .comment-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .nav-links {
+                gap: 20px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .blog-title {
+                font-size: 28px;
+            }
+
+            .form-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .post-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            .post-actions {
+                flex-wrap: wrap;
+            }
+
+            .comment-form {
+                flex-direction: column;
+            }
+        }
+
+        /* Анимации */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .blog-header, .create-post-section, .posts-section {
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        .post-card {
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        .post-card:nth-child(2) { animation-delay: 0.1s; }
+        .post-card:nth-child(3) { animation-delay: 0.2s; }
+        .post-card:nth-child(4) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+    <!-- Хедер -->
+    <header class="header">
+        <div class="header-content">
+            <button class="telegram-btn" id="telegramBtn">
+                <img class="telegram-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2329b6f6'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z'/%3E%3C/svg%3E" alt="Telegram">
+            </button>
+            <a href="/" class="logo">
+                <img src="https://c.animaapp.com/tID658kS/img/image-3@2x.png" alt="Rukami">
+                <span class="logo-text">Rukami</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">каталог</a>
+                <a href="/cart" class="nav-link">корзина</a>
+                <a href="/blog" class="nav-link active">блог</a>
+                <a href="/profile" class="nav-link">профиль</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <!-- Заголовок блога -->
+        <div class="blog-header">
+            <h1 class="blog-title">Блог Rukami</h1>
+            <p class="blog-subtitle">Делитесь своими мыслями, идеями и находками с сообществом мастеров</p>
+        </div>
+
+        <!-- Создание поста -->
+        <div class="create-post-section">
+            <form class="post-form" id="createPostForm">
+                <input type="text" class="form-input" placeholder="Заголовок поста" id="postTitle" required>
+                <textarea class="form-textarea" placeholder="О чем думаете?" id="postText" required></textarea>
+                <div class="form-row">
+                    <button type="submit" class="post-btn">📝 Опубликовать</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Посты -->
+        <div class="posts-section">
+            <h2 class="section-title">Лента</h2>
+            <div class="posts-list" id="postsList">
+                <!-- Посты будут генерироваться динамически -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Обработка создания нового поста
+        let posts = [
+            {
+                id: 1,
+                author: 'Анна Мастерица',
+                authorAvatar: 'А',
+                time: '2 часа назад',
+                title: 'Новая коллекция керамики',
+                text: 'Только что закончила работу над новой серией керамических изделий. Вдохновлялась природными формами и морскими мотивами.',
+                likes: 12,
+                comments: [
+                    {
+                        id: 1,
+                        author: 'Петр Гончар',
+                        avatar: 'П',
+                        text: 'Великолепная работа! Особенно понравилась ваза с волнистым узором.',
+                        time: '1 час назад'
+                    }
+                ],
+                liked: false
+            },
+            {
+                id: 2,
+                author: 'Дмитрий Столяр',
+                authorAvatar: 'Д',
+                time: '5 часов назад',
+                title: 'Мастер-класс по резьбе',
+                text: 'В субботу провожу мастер-класс по резьбе по дереву. Научу основным техникам и поделюсь секретами мастерства.',
+                likes: 8,
+                comments: [],
+                liked: true
+            }
+        ];
+
+        let nextId = 3;
+
+        function createPostHTML(post) {
+            return `
+                <div class="post-card" data-post-id="${post.id}">
+                    <div class="post-header">
+                        <div class="post-author">
+                            <div class="author-avatar">${post.authorAvatar}</div>
+                            <div class="author-info">
+                                <div class="author-name">${post.author}</div>
+                                <div class="post-time">${post.time}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="post-content">
+                        <h3 class="post-title">${post.title}</h3>
+                        <p class="post-text">${post.text}</p>
+                    </div>
+                    <div class="post-actions">
+                        <button class="action-btn ${post.liked ? 'liked' : ''}" onclick="toggleLike(${post.id})">
+                            ❤️ ${post.likes}
+                        </button>
+                        <button class="action-btn" onclick="toggleComments(${post.id})">
+                            💬 ${post.comments.length}
+                        </button>
+                        <button class="action-btn share-btn">
+                            📤 Поделиться
+                        </button>
+                    </div>
+                    ${post.comments.length > 0 ? `
+                        <div class="comments-section" id="comments-${post.id}">
+                            ${post.comments.map(comment => `
+                                <div class="comment">
+                                    <div class="comment-avatar">${comment.avatar}</div>
+                                    <div class="comment-content">
+                                        <div class="comment-author">${comment.author}</div>
+                                        <div class="comment-text">${comment.text}</div>
+                                        <div class="comment-time">${comment.time}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="comment-form" id="commentForm-${post.id}">
+                        <input type="text" class="comment-input" id="commentInput${post.id}" placeholder="Напишите комментарий...">
+                        <button class="comment-btn" onclick="addComment(${post.id})">Отправить</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Функция отрисовки постов
+        function renderPosts() {
+            const postsList = document.getElementById('postsList');
+            postsList.innerHTML = posts.map(post => createPostHTML(post)).join('');
+        }
+
+        // Функция переключения лайка
+        function toggleLike(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (post) {
+                post.liked = !post.liked;
+                post.likes += post.liked ? 1 : -1;
+                renderPosts();
+            }
+        }
+
+        // Функция переключения комментариев
+        function toggleComments(postId) {
+            const commentForm = document.getElementById(`commentForm-${postId}`);
+            commentForm.classList.toggle('active');
+            if (commentForm.classList.contains('active')) {
+                document.getElementById(`commentInput${postId}`).focus();
+            }
+        }
+
+        // Функция добавления комментария
+        function addComment(postId) {
+            const input = document.getElementById(`commentInput${postId}`);
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            const post = posts.find(p => p.id === postId);
+            if (post) {
+                post.comments.push({
+                    id: Date.now(),
+                    author: 'Вы',
+                    avatar: 'В',
+                    text: text,
+                    time: 'только что'
+                });
+
+                input.value = '';
+                renderPosts();
+                showNotification('Комментарий добавлен!');
+            }
+        }
+
+        document.getElementById('createPostForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const titleInput = document.getElementById('postTitle');
+            const textInput = document.getElementById('postText');
+
+            const title = titleInput.value.trim();
+            const text = textInput.value.trim();
+
+            if (!title || !text) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+
+            // Создаем новый пост
+            const newPost = {
+                id: nextId++,
+                author: 'Вы',
+                authorAvatar: 'В',
+                time: 'только что',
+                title: title,
+                text: text,
+                likes: 0,
+                comments: [],
+                liked: false
+            };
+
+            // Добавляем в начало списка
+            posts.unshift(newPost);
+
+            // Очищаем форму
+            titleInput.value = '';
+            textInput.value = '';
+
+            // Перерисовываем посты
+            renderPosts();
+
+            // Показываем уведомление
+            showNotification('Пост успешно опубликован!');
+        });
+
+        // Функция показа уведомлений
+        function showNotification(message) {
+            // Создаем элемент уведомления
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #ff6b9d, #ff8cc8);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                font-weight: 500;
+                box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3);
+                z-index: 1000;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+            `;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // Анимация появления
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            // Удаление через 3 секунды
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Обработка нажатия Enter в поле комментария
+        document.addEventListener('keydown', function(e) {
+            if (e.target.classList.contains('comment-input') && e.key === 'Enter') {
+                const postId = parseInt(e.target.id.replace('commentInput', ''));
+                addComment(postId);
+            }
+        });
+
+        // Обработка кнопки Telegram
+        document.getElementById('telegramBtn').addEventListener('click', function() {
+            // Анимация кнопки
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+
+            // Здесь можно добавить логику для Telegram
+            showNotification('Функция Telegram в разработке');
+        });
+
+        // Функция для форматирования времени
+        function formatTime(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (minutes < 1) return 'только что';
+            if (minutes < 60) return `${minutes} мин назад`;
+            if (hours < 24) return `${hours} ч назад`;
+            if (days < 7) return `${days} дн назад`;
+
+            return date.toLocaleDateString('ru-RU');
+        }
+
+        // Функция поиска постов
+        function searchPosts(query) {
+            if (!query.trim()) {
+                renderPosts();
+                return;
+            }
+
+            const filteredPosts = posts.filter(post =>
+                post.title.toLowerCase().includes(query.toLowerCase()) ||
+                post.text.toLowerCase().includes(query.toLowerCase()) ||
+                post.author.toLowerCase().includes(query.toLowerCase())
+            );
+
+            const postsList = document.getElementById('postsList');
+            if (filteredPosts.length === 0) {
+                postsList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <h3>Ничего не найдено</h3>
+                        <p>Попробуйте изменить поисковый запрос</p>
+                    </div>
+                `;
+            } else {
+                postsList.innerHTML = filteredPosts.map(post => createPostHTML(post)).join('');
+            }
+        }
+
+        // Функция сортировки постов
+        function sortPosts(sortType) {
+            switch(sortType) {
+                case 'newest':
+                    posts.sort((a, b) => b.id - a.id);
+                    break;
+                case 'oldest':
+                    posts.sort((a, b) => a.id - b.id);
+                    break;
+                case 'popular':
+                    posts.sort((a, b) => b.likes - a.likes);
+                    break;
+                case 'commented':
+                    posts.sort((a, b) => b.comments.length - a.comments.length);
+                    break;
+            }
+            renderPosts();
+        }
+
+        // Функция удаления поста (только для собственных постов)
+        function deletePost(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (post && post.author === 'Вы') {
+                if (confirm('Вы уверены, что хотите удалить этот пост?')) {
+                    posts = posts.filter(p => p.id !== postId);
+                    renderPosts();
+                    showNotification('Пост удален');
+                }
+            }
+        }
+
+        // Обработка клика по кнопке "Поделиться"
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('share-btn') || e.target.closest('.share-btn')) {
+                e.preventDefault();
+
+                // Анимация кнопки
+                const btn = e.target.closest('.share-btn') || e.target;
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                }, 150);
+
+                // Копируем ссылку в буфер обмена
+                const postCard = btn.closest('.post-card');
+                const postId = postCard.dataset.postId;
+                const shareUrl = `${window.location.origin}/blog#post-${postId}`;
+
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        showNotification('Ссылка скопирована в буфер обмена');
+                    });
+                } else {
+                    // Fallback для старых браузеров
+                    const textArea = document.createElement('textarea');
+                    textArea.value = shareUrl;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showNotification('Ссылка скопирована в буфер обмена');
+                }
+            }
+        });
+
+        // Обработка навигации по хештегам
+        window.addEventListener('hashchange', function() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#post-')) {
+                const postId = parseInt(hash.replace('#post-', ''));
+                const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+                if (postCard) {
+                    postCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Подсветка поста
+                    postCard.style.border = '2px solid #ff6b9d';
+                    setTimeout(() => {
+                        postCard.style.border = '';
+                    }, 2000);
+                }
+            }
+        });
+
+        // Автосохранение черновика
+        let draftTimer;
+        function saveDraft() {
+            const title = document.getElementById('postTitle').value;
+            const text = document.getElementById('postText').value;
+
+            if (title || text) {
+                const draft = { title, text, timestamp: Date.now() };
+                localStorage.setItem('blogDraft', JSON.stringify(draft));
+            }
+        }
+
+        // Загрузка черновика
+        function loadDraft() {
+            const draft = localStorage.getItem('blogDraft');
+            if (draft) {
+                const { title, text, timestamp } = JSON.parse(draft);
+                // Загружаем черновик только если он не старше 24 часов
+                if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+                    document.getElementById('postTitle').value = title || '';
+                    document.getElementById('postText').value = text || '';
+                    if (title || text) {
+                        showNotification('Восстановлен несохраненный черновик');
+                    }
+                }
+            }
+        }
+
+        // Обработчики для автосохранения
+        document.getElementById('postTitle').addEventListener('input', function() {
+            clearTimeout(draftTimer);
+            draftTimer = setTimeout(saveDraft, 1000);
+        });
+
+        document.getElementById('postText').addEventListener('input', function() {
+            clearTimeout(draftTimer);
+            draftTimer = setTimeout(saveDraft, 1000);
+        });
+
+        // Очистка черновика при успешной отправке
+        document.getElementById('createPostForm').addEventListener('submit', function() {
+            localStorage.removeItem('blogDraft');
+        });
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPosts();
+            loadDraft();
+
+            // Проверяем хеш при загрузке
+            if (window.location.hash) {
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('hashchange'));
+                }, 500);
+            }
+        });
+
+        // Обработка ошибок загрузки изображений
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.target.style.display = 'none';
+            }
+        }, true);
+
+        // Бесконечная прокрутка (имитация)
+        let loading = false;
+        window.addEventListener('scroll', function() {
+            if (loading) return;
+
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+            if (scrollTop + clientHeight >= scrollHeight - 1000) {
+                loading = true;
+
+                // Имитация загрузки новых постов
+                setTimeout(() => {
+                    // Здесь можно добавить логику загрузки новых постов с сервера
+                    loading = false;
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
